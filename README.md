@@ -27,7 +27,7 @@ Then open `http://localhost:3000` and use DevTools → Application → Service W
 
 ## Progress
 
-- [ ] Lifecycle
+- [x] Lifecycle
 - [ ] Offline fallback
 - [ ] Cache strategies
 - [ ] Cache versioning & cleanup
