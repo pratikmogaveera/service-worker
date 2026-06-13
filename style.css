@@ -1,5 +1,43 @@
+/* http://meyerweb.com/eric/tools/css/reset/ 
+   v2.0 | 20110126
+   License: none (public domain)
+*/
+
+* {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+
+body {
+  line-height: 1;
+}
+
 html {
   background-color: #101010;
   color: #eaeaea;
   font-family: Helvetica, Arial, sans-serif;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #353535;
+  padding: 16px;
+}
+
+header h1 {
+  font-size: 24px;
+}
+
+.status {
+  color: rgb(101, 201, 1)
+}
+
+main {
+  padding: 16px;
 }

@@ -6,30 +6,44 @@ Learning service workers from scratch with plain HTML + JS. No frameworks, no bu
 
 Build a deep mental model of service worker internals before applying them in production with framework abstractions (Phase 2).
 
-## Topics Covered
+## Tech Stack
 
-1. Lifecycle (register, install, activate, fetch)
-2. Offline fallback page
-3. Cache strategies (cache-first, network-first, stale-while-revalidate)
-4. Cache versioning & cleanup
-5. Background sync
-6. Push notifications
+- Plain HTML + JS
+- No frameworks, no build tools
+- Static server via `npx serve .`
 
 ## How to Run
-
-Serve with any static server (service workers require HTTPS or localhost):
 
 ```bash
 npx serve .
 ```
 
-Then open `http://localhost:3000` and use DevTools → Application → Service Workers to observe behavior.
+Open `http://localhost:3000` and use DevTools → Application → Service Workers to observe behavior.
+
+## File Structure
+
+```
+service-worker/
+├── index.html          — entry point
+├── fallback.html       — offline fallback page (self-contained)
+├── app.js              — SW registration logic
+├── service-worker.js   — service worker lifecycle + fetch
+├── style.css           — base styles
+├── PLAN.md             — learning roadmap
+└── NOTES.md            — concepts and Q&A
+```
 
 ## Progress
 
 - [x] Lifecycle
-- [ ] Offline fallback
+- [x] Offline fallback
 - [ ] Cache strategies
 - [ ] Cache versioning & cleanup
 - [ ] Background sync
 - [ ] Push notifications
+
+## Resources
+
+- [MDN — Service Worker API](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API)
+- [MDN — Using Service Workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers)
+- [web.dev — Service Workers](https://web.dev/learn/pwa/service-workers)
