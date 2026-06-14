@@ -27,8 +27,9 @@ service-worker/
 ├── index.html          — entry point
 ├── fallback.html       — offline fallback page (self-contained)
 ├── app.js              — SW registration logic
-├── service-worker.js   — service worker lifecycle + fetch
+├── service-worker.js   — service worker lifecycle + cache strategies
 ├── style.css           — base styles
+├── assets/             — static images (cache-first targets)
 ├── PLAN.md             — learning roadmap
 └── NOTES.md            — concepts and Q&A
 ```

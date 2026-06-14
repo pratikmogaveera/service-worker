@@ -89,3 +89,47 @@ The browser needs to know immediately whether the SW is handling this request or
 ### Why inline CSS for the fallback page?
 
 When offline, only navigation requests get the cached fallback. The CSS request is not a navigation (`request.mode !== 'navigate'`), so it falls through to the network and fails. Inlining makes the page self-contained.
+
+## 3. Cache Strategies — Cache-First
+
+### Key Concepts
+
+- **Cache-first**: check cache → if hit, return immediately (no network). If miss → fetch from network → cache the response → return it.
+- A `Response` body is a **stream** — it can only be consumed once. To use it in two places (cache + page), you must call `response.clone()` before either consumer reads it.
+- `cache.put(request, response)` stores a response you already have. Unlike `cache.add()`, it doesn't fetch — avoids a redundant network request.
+- Always check `response.ok` before caching — don't pollute the cache with 404s or 500s.
+- Pre-caching during install seeds the cache for critical assets. Dynamic caching on miss handles everything else.
+- Cross-origin (opaque) responses have `response.ok === false` and count ~7MB against cache quota — avoid caching external URLs with this strategy.
+
+### APIs / Tools Learned
+
+| API | Purpose |
+|-----|---------|
+| `response.clone()` | Create a copy with an independent body stream |
+| `cache.put(request, response)` | Store a response you already have (no fetch) |
+| `response.ok` | Boolean — `true` if status is 200–299 |
+
+### Pattern: Cache-first with dynamic caching
+
+```
+check cache → hit: return cached response
+            → miss: fetch from network
+                    → success + ok: clone, cache.put(clone), return original
+                    → success + !ok: return response (don't cache)
+```
+
+### Routing
+
+Route requests to strategies based on URL patterns in the fetch handler using `if/else if`. Use `event.request.url.includes()` for simple matching.
+
+---
+
+### Q&A
+
+### Why use `cache.put()` instead of `cache.add()` for dynamic caching?
+
+`cache.add(url)` fetches the resource itself and stores the result. If you've already fetched it (to return to the page), using `add()` would fetch it a second time. `cache.put()` lets you store the response you already have.
+
+### Why clone before caching, not after?
+
+Once a stream is read, it's consumed. If you pass the original to the cache and then try to return it to the page, the page gets an empty body. Clone first, then each copy has its own unread stream.

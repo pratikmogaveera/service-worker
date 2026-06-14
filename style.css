@@ -41,3 +41,15 @@ header h1 {
 main {
   padding: 16px;
 }
+
+.img-container {
+  width: 100%;
+}
+
+img {
+  margin-top: 16px;
+  width: stretch;
+  padding: 4px;
+  border: 1px solid white;
+  border-radius: 8px;
+}
