@@ -133,3 +133,53 @@ Route requests to strategies based on URL patterns in the fetch handler using `i
 ### Why clone before caching, not after?
 
 Once a stream is read, it's consumed. If you pass the original to the cache and then try to return it to the page, the page gets an empty body. Clone first, then each copy has its own unread stream.
+
+## 3b. Cache Strategies — Network-First
+
+### Key Concepts
+
+- **Network-first**: always try network → on success, clone + cache the response (keeps cache fresh) → return original. On failure → serve stale cached version if available.
+- Best for resources that change frequently but should still work offline (HTML pages, CSS, JS, API responses).
+- The cache acts as a **safety net**, not the primary source — you always want the freshest version when online.
+- Handle the "both fail" case (network down + never cached): return a fallback page for navigation, or a synthetic error response for sub-resources.
+
+### APIs / Tools Learned
+
+| API | Purpose |
+|-----|---------|
+| `new Response(body, init)` | Create a synthetic response (e.g., for error states) |
+| `cache.match(request)` | Instance method — search a specific cache (vs `caches.match` which searches all) |
+
+### Pattern: Network-first with caching
+
+```
+try network → success + ok: clone, cache.put(clone), return original
+            → success + !ok: return response (don't cache)
+            → failure: check cache
+                       → hit: return stale cached response
+                       → miss + navigate: return /fallback.html
+                       → miss + sub-resource: return 408 Response
+```
+
+### Routing Strategy
+
+```
+/assets/*        → cache-first (static, rarely changes)
+everything else  → network-first (HTML, CSS, JS — want freshness)
+```
+
+---
+
+### Q&A
+
+### Why cache on every successful network response?
+
+The cache stays fresh. Next time you go offline, you have the most recent version — not a stale copy from the first visit.
+
+### Why separate handling for navigation vs sub-resource on total failure?
+
+A user navigating to a page expects to see *something* — the fallback page communicates "you're offline." A failed CSS or JS request doesn't warrant a full HTML page response — a 408 lets the browser handle it naturally.
+
+### Why is the cache empty (only fallback.html) after the first page load?
+
+The SW installs and activates during the first load, but the page's requests are already in-flight before the SW takes control. Even with `skipWaiting()` + `clients.claim()`, those initial requests bypass the fetch handler. On the second load (refresh), the SW is controlling — requests flow through the fetch handler and get cached via network-first. Going offline between 1st and 2nd load gives you only `fallback.html`.

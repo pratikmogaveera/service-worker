@@ -1,22 +1,12 @@
-// Pre-cache fallback resources during install.
+// Pre-cache critical resources during install.
 // addAll is atomic — if any fetch fails, install fails and SW won't activate.
 async function precacheResources() {
   const cache = await caches.open('v1');
-  await cache.addAll(["/fallback.html", "/assets/rock.avif"]);
+  await cache.addAll(["/fallback.html"]);
 }
 
-// Network-first strategy for navigation requests.
-// Try network → on failure, serve cached fallback.
-async function handleNavigationNetworkFirst(event) {
-  const { request } = event;
-  try {
-    return await fetch(request);
-  } catch (error) {
-    console.error('Failed fetch request.')
-    return caches.match("/fallback.html")
-  }
-}
-
+// Cache-first: check cache → return if hit.
+// On miss: fetch from network → clone + cache for next time → return original.
 async function handleCacheFirst(event) {
   const { request } = event;
   const cachedAsset = await caches.match(request);
@@ -36,6 +26,35 @@ async function handleCacheFirst(event) {
   }
 }
 
+// Network-first: try network → clone + cache on success → return.
+// On failure: serve from cache if available, else fallback page (navigation) or 408 (sub-resources).
+async function handleNetworkFirst(event) {
+  const { request } = event
+  const cache = await caches.open('v1')
+  try {
+    return await fetch(request).then((response) => {
+      if (response.ok) {
+        const resClone = response.clone()
+        cache.put(request, resClone)
+      }
+
+      return response
+    })
+  } catch (error) {
+    console.log('Network fail, fetching from cache:', request.url)
+    const cachedResponse = await cache.match(request)
+    if (cachedResponse)
+      return cachedResponse
+    else {
+      console.log('Network fail, Cache miss')
+      if (request.mode === 'navigate')
+        return caches.match("/fallback.html")
+      else
+        return new Response('Network error', { status: 408 })
+    }
+  }
+}
+
 self.addEventListener('install', (event) => {
   // skipWaiting: activate immediately, don't wait for old SW's tabs to close
   event.waitUntil(self.skipWaiting());
@@ -51,11 +70,12 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // intercepting navigation and assets requests (HTML pages, and images)
-  // respondWith must be called synchronously — async logic goes inside the promise
+  // Route requests to strategies: assets → cache-first, everything else → network-first.
+  // respondWith must be called synchronously — async logic goes inside the promise.
 
-  if (event.request.mode === 'navigate')
-    event.respondWith(handleNavigationNetworkFirst(event))
-  else if (event.request.url.includes('/assets/'))
+  if (event.request.url.includes('/assets/'))
     event.respondWith(handleCacheFirst(event))
+  else {
+    event.respondWith(handleNetworkFirst(event))
+  }
 })
