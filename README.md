@@ -38,7 +38,7 @@ service-worker/
 
 - [x] Lifecycle
 - [x] Offline fallback
-- [ ] Cache strategies
+- [x] Cache strategies
 - [ ] Cache versioning & cleanup
 - [ ] Background sync
 - [ ] Push notifications

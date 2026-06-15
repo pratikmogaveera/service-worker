@@ -9,4 +9,17 @@ const registerServiceWorker = async () => {
   }
 };
 
+const getIstTime = async () => {
+  const res = await fetch('https://time.now/developer/api/timezone/Asia/Kolkata')
+  const data = await res.json()
+  const [date, time] = data.datetime.split('T')
+  return `${date} : ${time.split('.')[0]}`
+}
+
+const showTime = async () => {
+  const element = document.getElementsByClassName('time')
+  element[0].textContent = await getIstTime()
+}
+
 registerServiceWorker()
+showTime()

@@ -55,6 +55,42 @@ async function handleNetworkFirst(event) {
   }
 }
 
+// Stale-while-revalidate: return cached response instantly for speed,
+// then fetch fresh version in background to update cache for next time.
+// Trade-off: data is at most one request behind, but page loads are instant.
+async function handleStaleWhileRevalidate(event) {
+  const { request } = event
+  const cache = await caches.open('v1')
+  try {
+    const cachedResponse = await cache.match(request)
+    if (cachedResponse) {
+      const res = fetch(request)
+        .then((res) => {
+          if (res.ok)
+            cache.put(request, res)
+        })
+        .catch((err) => console.log('Error while revalidating cached response:', err))
+      return cachedResponse
+    } else {
+      return await fetch(request).then((response) => {
+        if (response.ok) {
+          const resClone = response.clone()
+          cache.put(request, resClone)
+        }
+
+        return response
+      })
+    }
+
+  } catch (error) {
+    const cachedResponse = await cache.match(request)
+    if (cachedResponse)
+      return cachedResponse
+    else
+      return new Response('Network error', { status: 408 })
+  }
+}
+
 self.addEventListener('install', (event) => {
   // skipWaiting: activate immediately, don't wait for old SW's tabs to close
   event.waitUntil(self.skipWaiting());
@@ -75,6 +111,9 @@ self.addEventListener('fetch', (event) => {
 
   if (event.request.url.includes('/assets/'))
     event.respondWith(handleCacheFirst(event))
+  else if (event.request.url === 'https://time.now/developer/api/timezone/Asia/Kolkata') {
+    event.respondWith(handleStaleWhileRevalidate(event))
+  }
   else {
     event.respondWith(handleNetworkFirst(event))
   }

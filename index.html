@@ -5,14 +5,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css" />
-  <script src="./app.js"></script>
+  <script src="./app.js" defer></script>
   <title>Document</title>
 </head>
 
 <body>
   <header>
     <h1>Service Worker</h1>
-    <h2 class="status">Online</h2>
+
+    <div style="display:flex; align-items: center; gap: 8px;">
+      <h3 class="time"></h3>
+      <h2 class="status">Online</h2>
+    </div>
   </header>
   <main>
     <p>This is the body of the page.</p>

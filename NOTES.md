@@ -183,3 +183,55 @@ A user navigating to a page expects to see *something* — the fallback page com
 ### Why is the cache empty (only fallback.html) after the first page load?
 
 The SW installs and activates during the first load, but the page's requests are already in-flight before the SW takes control. Even with `skipWaiting()` + `clients.claim()`, those initial requests bypass the fetch handler. On the second load (refresh), the SW is controlling — requests flow through the fetch handler and get cached via network-first. Going offline between 1st and 2nd load gives you only `fallback.html`.
+
+## 3c. Cache Strategies — Stale-While-Revalidate
+
+### Key Concepts
+
+- **Stale-while-revalidate**: serve from cache instantly (speed), fire a background fetch to update the cache for next time.
+- Data is at most **one request behind** — not stale forever like cache-first, because every serve triggers a background refresh.
+- Best for content where instant load matters more than absolute freshness (blog posts, profile data, non-critical API responses).
+- The background fetch is **fire-and-forget** — don't await it, don't let it block the response to the page.
+- On cache miss (first visit), fall through to network and wait — no choice, there's nothing cached yet.
+- No need to clone in the background revalidation path — you're not using that response for anything else.
+
+### Pattern: Stale-while-revalidate
+
+```
+check cache → hit: return cached response immediately
+                   + fire background fetch → on success + ok: cache.put(fresh response)
+                                           → on failure: silently ignore (.catch)
+            → miss: fetch from network → clone, cache.put(clone), return original
+```
+
+### Trade-offs vs Other Strategies
+
+| Strategy | Speed | Freshness | Offline |
+|----------|-------|-----------|---------|
+| Cache-first | Instant | Stale forever (until SW update) | ✅ |
+| Network-first | Slow (waits for network) | Always fresh | ✅ (if cached) |
+| Stale-while-revalidate | Instant | One request behind | ✅ (if cached) |
+
+### Routing Strategy (Final)
+
+```
+/assets/*           → cache-first (static, rarely changes)
+external API calls  → stale-while-revalidate (speed > freshness)
+everything else     → network-first (HTML, CSS, JS — want freshness)
+```
+
+---
+
+### Q&A
+
+### Why not clone the response in the background revalidation?
+
+You're not using that response anywhere else — it goes straight into `cache.put()`. Cloning is only needed when you want to consume the response in two places (return to page + store in cache).
+
+### Why add `.catch()` to the background fetch?
+
+If the network fails during revalidation, the promise rejects. Without `.catch()`, it becomes an unhandled promise rejection. Since the user already got the cached response, the failure is harmless — swallow it silently.
+
+### When would you choose stale-while-revalidate over network-first?
+
+When instant page load is more important than showing the absolute latest data. If showing stale data for one request is acceptable (e.g., a dashboard that updates every few seconds anyway), SWR gives you cache-first speed with eventual freshness.
