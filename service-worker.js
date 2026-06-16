@@ -1,7 +1,19 @@
+const CACHE_VERSION = 'static-v1'
+
+async function clearOldCaches() {
+  const cache = await caches.keys()
+  console.log('CACHE:', cache)
+
+  for (let cacheVersion of cache) {
+    if (cacheVersion !== CACHE_VERSION)
+      await caches.delete(cacheVersion)
+  }
+}
+
 // Pre-cache critical resources during install.
 // addAll is atomic — if any fetch fails, install fails and SW won't activate.
 async function precacheResources() {
-  const cache = await caches.open('v1');
+  const cache = await caches.open(CACHE_VERSION);
   await cache.addAll(["/fallback.html"]);
 }
 
@@ -17,7 +29,7 @@ async function handleCacheFirst(event) {
     return await fetch(request).then(async (response) => {
       if (response.ok) {
         const resClone = response.clone()
-        const cache = await caches.open('v1')
+        const cache = await caches.open(CACHE_VERSION)
         cache.put(request, resClone)
       }
 
@@ -30,7 +42,7 @@ async function handleCacheFirst(event) {
 // On failure: serve from cache if available, else fallback page (navigation) or 408 (sub-resources).
 async function handleNetworkFirst(event) {
   const { request } = event
-  const cache = await caches.open('v1')
+  const cache = await caches.open(CACHE_VERSION)
   try {
     return await fetch(request).then((response) => {
       if (response.ok) {
@@ -60,7 +72,7 @@ async function handleNetworkFirst(event) {
 // Trade-off: data is at most one request behind, but page loads are instant.
 async function handleStaleWhileRevalidate(event) {
   const { request } = event
-  const cache = await caches.open('v1')
+  const cache = await caches.open(CACHE_VERSION)
   try {
     const cachedResponse = await cache.match(request)
     if (cachedResponse) {
@@ -99,9 +111,10 @@ self.addEventListener('install', (event) => {
   console.log("Service Worker Installed.");
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', async (event) => {
   // claim: take control of all open tabs without waiting for navigation
   event.waitUntil(self.clients.claim());
+  event.waitUntil(clearOldCaches())
   console.log("Service Worker Activated.");
 });
 
