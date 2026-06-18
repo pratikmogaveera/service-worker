@@ -53,3 +53,29 @@ img {
   border: 1px solid white;
   border-radius: 8px;
 }
+
+.form-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  border: 1px solid white;
+  border-radius: 8px;
+  padding: 16px;
+  width: fit-content;
+}
+
+.form-container input {
+  background-color: #101010;
+  color: #eaeaea;
+  border: 1px solid #404040;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+.form-container button {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: darkorange;
+  color: white;
+}

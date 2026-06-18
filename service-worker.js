@@ -45,7 +45,7 @@ async function handleNetworkFirst(event) {
   const cache = await caches.open(CACHE_VERSION)
   try {
     return await fetch(request).then((response) => {
-      if (response.ok) {
+      if (response.ok && request.method === "GET") {
         const resClone = response.clone()
         cache.put(request, resClone)
       }

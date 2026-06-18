@@ -26,8 +26,9 @@ Open `http://localhost:3000` and use DevTools → Application → Service Worker
 service-worker/
 ├── index.html          — entry point
 ├── fallback.html       — offline fallback page (self-contained)
-├── app.js              — SW registration logic
+├── app.js              — SW registration + form submit logic
 ├── service-worker.js   — service worker lifecycle + cache strategies
+├── db.js               — IndexedDB helpers (WIP)
 ├── style.css           — base styles
 ├── assets/             — static images (cache-first targets)
 ├── PLAN.md             — learning roadmap
@@ -39,7 +40,7 @@ service-worker/
 - [x] Lifecycle
 - [x] Offline fallback
 - [x] Cache strategies
-- [ ] Cache versioning & cleanup
+- [x] Cache versioning & cleanup
 - [ ] Background sync
 - [ ] Push notifications
 

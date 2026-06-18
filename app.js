@@ -21,5 +21,23 @@ const showTime = async () => {
   element[0].textContent = await getIstTime()
 }
 
+const form = document.getElementById('form-container')
+form.addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const input = document.getElementById('name')
+
+  fetch('https://jsonplaceholder.typicode.com/users', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: input.value
+    }),
+    headers: {
+      'Content-type': 'application/json; charset=UTF-8',
+    },
+  })
+    .then((response) => response.json())
+    .then((json) => console.log(json));
+})
+
 registerServiceWorker()
 showTime()
