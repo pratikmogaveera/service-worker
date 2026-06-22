@@ -48,3 +48,16 @@ export async function getAllFromStore() {
   })
 }
 
+export async function deleteFromStore(id) {
+  const db = await openDb()
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(DB_STORE, 'readwrite')
+    const store = transaction.objectStore(DB_STORE)
+    const request = store.delete(id)
+
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
+}
+

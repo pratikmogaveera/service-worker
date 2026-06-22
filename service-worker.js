@@ -1,4 +1,4 @@
-import { openDb, addToStore } from "./db.js"
+import { openDb, addToStore, deleteFromStore, getAllFromStore } from "./db.js"
 
 const CACHE_VERSION = 'static-v1'
 
@@ -81,6 +81,9 @@ async function handleNetworkFirst(event) {
         headers: Object.fromEntries(request.headers.entries()),
         body: await requstClone.text()
       })
+
+      await self.registration.sync.register('replay-pending')
+
       return new Response('Network error', { status: 408 })
     }
   }
@@ -122,6 +125,26 @@ async function handleStaleWhileRevalidate(event) {
   }
 }
 
+async function handleReplayPendingRequests(event) {
+  const pendingRequests = await getAllFromStore()
+  for (let pendingRequest of pendingRequests) {
+    const { id, url, method, body, headers } = pendingRequest
+    const res = await fetch(url, {
+      headers,
+      method,
+      body
+    })
+      .then(async (response) => {
+        if (!response.ok)
+          throw new Error(`Request failed: ${response.status}`)
+        await deleteFromStore(id)
+        return response.json()
+      })
+      .then((json) => console.log(json))
+
+  }
+}
+
 self.addEventListener('install', (event) => {
   // skipWaiting: activate immediately, don't wait for old SW's tabs to close
   event.waitUntil(self.skipWaiting());
@@ -149,5 +172,11 @@ self.addEventListener('fetch', (event) => {
   }
   else {
     event.respondWith(handleNetworkFirst(event))
+  }
+})
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'replay-pending') {
+    event.waitUntil(handleReplayPendingRequests())
   }
 })

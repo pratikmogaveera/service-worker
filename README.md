@@ -41,7 +41,7 @@ service-worker/
 - [x] Offline fallback
 - [x] Cache strategies
 - [x] Cache versioning & cleanup
-- [ ] Background sync
+- [x] Background sync
 - [ ] Push notifications
 
 ## Resources

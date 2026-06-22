@@ -358,10 +358,9 @@ SW:   sync event fires → read from IndexedDB → replay fetch → delete from 
 
 - [x] Form created (POST name to jsonplaceholder.typicode.com/users)
 - [x] POST caching bug fixed (only cache GET requests)
-- [x] IndexedDB helper functions (db.js) — openDb, addToStore, getAllFromStore
+- [x] IndexedDB helper functions (db.js) — openDb, addToStore, getAllFromStore, deleteFromStore
 - [x] SW-side offline detection + store in IndexedDB (request.clone + serialize)
 - [x] Page-side error handling (check response.ok before parsing)
-- [ ] Sync event registration after storing in IDB
-- [ ] Sync event handler in SW (replay + delete)
-- [ ] deleteFromStore helper in db.js
-- [ ] End-to-end test: offline submit → online replay
+- [x] Sync event registration after storing in IDB (`self.registration.sync.register`)
+- [x] Sync event handler in SW (replay + delete on success)
+- [x] End-to-end test: offline submit → online replay ✓
