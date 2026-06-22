@@ -1,4 +1,11 @@
+import { openDb, addToStore } from "./db.js"
+
 const CACHE_VERSION = 'static-v1'
+
+async function initializeIndexDB() {
+  const db = await openDb()
+  console.log('Initiliaze IDB:', db)
+}
 
 async function clearOldCaches() {
   const cache = await caches.keys()
@@ -42,6 +49,7 @@ async function handleCacheFirst(event) {
 // On failure: serve from cache if available, else fallback page (navigation) or 408 (sub-resources).
 async function handleNetworkFirst(event) {
   const { request } = event
+  const requstClone = request.clone()
   const cache = await caches.open(CACHE_VERSION)
   try {
     return await fetch(request).then((response) => {
@@ -53,16 +61,27 @@ async function handleNetworkFirst(event) {
       return response
     })
   } catch (error) {
-    console.log('Network fail, fetching from cache:', request.url)
-    const cachedResponse = await cache.match(request)
-    if (cachedResponse)
-      return cachedResponse
-    else {
-      console.log('Network fail, Cache miss')
-      if (request.mode === 'navigate')
-        return caches.match("/fallback.html")
-      else
-        return new Response('Network error', { status: 408 })
+    if (request.method === "GET") {
+      console.log('Network fail, fetching from cache:', request.url)
+      const cachedResponse = await cache.match(request)
+      if (cachedResponse)
+        return cachedResponse
+      else {
+        console.log('Network fail, Cache miss')
+        if (request.mode === 'navigate')
+          return caches.match("/fallback.html")
+        else
+          return new Response('Network error', { status: 408 })
+      }
+    } else {
+      console.log(`Network fail, adding ${request.method} request to pending requests queue.`, request.url)
+      await addToStore({
+        url: request.url,
+        method: request.method,
+        headers: Object.fromEntries(request.headers.entries()),
+        body: await requstClone.text()
+      })
+      return new Response('Network error', { status: 408 })
     }
   }
 }
@@ -115,6 +134,7 @@ self.addEventListener('activate', async (event) => {
   // claim: take control of all open tabs without waiting for navigation
   event.waitUntil(self.clients.claim());
   event.waitUntil(clearOldCaches())
+  event.waitUntil(initializeIndexDB())
   console.log("Service Worker Activated.");
 });
 

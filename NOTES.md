@@ -327,25 +327,41 @@ The Cache API is keyed by Request (URL + method + headers). POST requests have a
 - IndexedDB is accessible from **both** the page and the service worker — same database, shared.
 - Transactions auto-close after all requests complete — can't reuse a closed transaction.
 
-### Architecture Decision: Page-Side Approach
+### Architecture Decision: SW-Side Approach
 
-For form submission sync, handle offline detection in the **page** (not the SW fetch handler):
+Handling offline detection in the **SW fetch handler** — intercept failed non-GET requests, store in IndexedDB, replay on sync:
 
 ```
-Page: submit → try fetch → fail → store in IndexedDB + sync.register('tag')
-SW:   sync event fires → read from IndexedDB → replay fetch → clear on success
+Page: submit → fetch (intercepted by SW)
+SW:   fetch fails → clone request beforehand → serialize (url, method, headers, body) → store in IDB → register sync
+SW:   sync event fires → read from IndexedDB → replay fetch → delete from IDB on success
 ```
 
-**Why page-side over SW-side:**
-- Page already has structured data (form values) — no need to clone/parse request streams
-- Clearer separation: page handles intent, SW handles replay
-- Industry standard pattern (Workbox recommends this)
+**Why SW-side was chosen:**
+- Keeps all offline/network logic centralized in the SW
+- Page stays simple — just fires fetch, handles ok/error UI
+- Trade-off: must clone request before fetch (body stream consumed by failed fetch)
+
+**Serialization gotchas encountered:**
+- `Request.headers` is a `Headers` object — not structured-cloneable. Use `Object.fromEntries(request.headers.entries())`
+- `Request.body` is a `ReadableStream` — consumed after fetch. Must `request.clone()` before fetch, then `await clone.text()` in catch
+- IndexedDB only stores structured-cloneable data (plain objects, strings, arrays, etc.)
+
+### Module SW Registration
+
+- Service workers are classic scripts by default — no `import`/`export`
+- To use ES modules: `navigator.serviceWorker.register('/sw.js', { type: 'module' })`
+- Browser must resolve full paths with extension (`"./db.js"`, not `"./db"`)
+- Chromium 91+ only (no Firefox/Safari)
 
 ### Status
 
 - [x] Form created (POST name to jsonplaceholder.typicode.com/users)
 - [x] POST caching bug fixed (only cache GET requests)
-- [ ] IndexedDB helper functions (db.js)
-- [ ] Offline detection + store in IndexedDB (app.js)
-- [ ] Sync event handler in SW
+- [x] IndexedDB helper functions (db.js) — openDb, addToStore, getAllFromStore
+- [x] SW-side offline detection + store in IndexedDB (request.clone + serialize)
+- [x] Page-side error handling (check response.ok before parsing)
+- [ ] Sync event registration after storing in IDB
+- [ ] Sync event handler in SW (replay + delete)
+- [ ] deleteFromStore helper in db.js
 - [ ] End-to-end test: offline submit → online replay

@@ -1,7 +1,8 @@
 const registerServiceWorker = async () => {
   if ("serviceWorker" in navigator) {
     try {
-      const registration = await navigator.serviceWorker.register("/service-worker.js");
+      const registration = await navigator.serviceWorker.register('/service-worker.js', { type: 'module' })
+
       console.log("Service Worker registered!");
     } catch (error) {
       console.error('Something went wrong while registering the service worker.', error);
@@ -35,8 +36,13 @@ form.addEventListener('submit', async (e) => {
       'Content-type': 'application/json; charset=UTF-8',
     },
   })
-    .then((response) => response.json())
-    .then((json) => console.log(json));
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`Request failed: ${response.status}`)
+      return response.json()
+    })
+    .then((json) => console.log(json))
+    .catch((error) => console.log('Something went wrong while submitting the form.', error.message))
 })
 
 registerServiceWorker()
