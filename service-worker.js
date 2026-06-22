@@ -46,7 +46,9 @@ async function handleCacheFirst(event) {
 }
 
 // Network-first: try network → clone + cache on success → return.
-// On failure: serve from cache if available, else fallback page (navigation) or 408 (sub-resources).
+// On failure (GET): serve from cache if available, else fallback page (navigation) or 408 (sub-resources).
+// On failure (non-GET): serialize request into IndexedDB for background sync replay.
+// Clone request before fetch — body stream is consumed by the failed fetch and can't be re-read.
 async function handleNetworkFirst(event) {
   const { request } = event
   const requstClone = request.clone()
@@ -74,6 +76,8 @@ async function handleNetworkFirst(event) {
           return new Response('Network error', { status: 408 })
       }
     } else {
+      // Queue failed non-GET request for background sync.
+      // Headers and body must be serialized — IDB only stores structured-cloneable data.
       console.log(`Network fail, adding ${request.method} request to pending requests queue.`, request.url)
       await addToStore({
         url: request.url,
@@ -82,6 +86,7 @@ async function handleNetworkFirst(event) {
         body: await requstClone.text()
       })
 
+      // Register sync — browser will fire 'sync' event when connectivity returns.
       await self.registration.sync.register('replay-pending')
 
       return new Response('Network error', { status: 408 })
@@ -125,6 +130,9 @@ async function handleStaleWhileRevalidate(event) {
   }
 }
 
+// Replay pending requests from IndexedDB when connectivity returns.
+// Delete each entry only after successful fetch — if fetch fails, the promise rejects
+// and the browser will retry the sync event later (entries remain in IDB).
 async function handleReplayPendingRequests(event) {
   const pendingRequests = await getAllFromStore()
   for (let pendingRequest of pendingRequests) {
@@ -175,6 +183,8 @@ self.addEventListener('fetch', (event) => {
   }
 })
 
+// Background sync: browser fires this event when it detects connectivity after a sync.register() call.
+// waitUntil keeps the SW alive during replay; rejected promise triggers browser retry.
 self.addEventListener('sync', (event) => {
   if (event.tag === 'replay-pending') {
     event.waitUntil(handleReplayPendingRequests())
