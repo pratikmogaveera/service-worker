@@ -1,5 +1,30 @@
 # Service Worker — Learning Notes
 
+## TL;DR Mental Model
+
+A service worker is a script that runs **separately from your page**, intercepts all network requests, and stays alive even when the tab is closed. It enables:
+
+- **Offline support** — Cache API stores responses; serve them when network fails
+- **Background data sync** — IndexedDB queues failed requests; SyncManager replays them on reconnect
+- **Push notifications** — Server pushes messages via a push service; SW wakes up and shows OS notifications
+
+It has a strict lifecycle (**install → wait → activate**) to guarantee one SW version serves the entire page session — no mid-session breakage. The browser byte-compares the SW file on each page load to detect updates.
+
+### Per-Section Mental Models
+
+| Section | One-line model |
+|---------|---------------|
+| Lifecycle | SW is born (install), waits its turn (waiting), takes over (activate), then proxies all requests (fetch) |
+| Cache API | A key-value store you own: Request → Response. Separate from browser HTTP cache. You decide what goes in and when. |
+| Cache-first | "Use what I have, fetch only if I don't have it" — speed over freshness |
+| Network-first | "Always check the server, fall back to cache if it's down" — freshness over speed |
+| Stale-while-revalidate | "Serve stale instantly, refresh in background for next time" — speed + eventual freshness |
+| Cache versioning | Each SW version gets its own cache name; old caches are deleted on activate |
+| Background sync | Failed outgoing requests go into IndexedDB; browser fires `sync` event when back online; SW replays the queue |
+| Push notifications | Server → Push Service (relay) → Browser wakes SW → `push` event → `showNotification()` |
+
+---
+
 ## 1. Lifecycle
 
 ### Key Concepts
@@ -280,7 +305,7 @@ The Cache API is keyed by Request (URL + method + headers). POST requests have a
 
 ---
 
-## 5. Background Sync (In Progress)
+## 5. Background Sync
 
 ### Key Concepts
 
@@ -364,3 +389,66 @@ SW:   sync event fires → read from IndexedDB → replay fetch → delete from 
 - [x] Sync event registration after storing in IDB (`self.registration.sync.register`)
 - [x] Sync event handler in SW (replay + delete on success)
 - [x] End-to-end test: offline submit → online replay ✓
+
+---
+
+## 6. Push Notifications
+
+### Key Concepts
+
+- **Three parties**: Client (browser), Push Service (Google FCM / Mozilla), Your Server.
+- **VAPID keys** (Voluntary Application Server Identification) — public/private key pair that proves your server's identity to the push service. Prevents random servers from pushing to your users.
+- **Push subscription** — an object containing an `endpoint` (push service URL), `keys.p256dh` (encryption key), and `keys.auth` (auth secret). The server needs all three to send a push.
+- The `push` event fires in the **SW even if all tabs are closed** — the browser wakes the SW independently.
+- **`userVisibleOnly: true`** — a contract that you'll show a notification for every push. If you receive a push and don't call `showNotification()`, the browser shows a generic fallback.
+- **Notification permission** has three states: `'granted'`, `'denied'`, `'default'`. Only `'default'` will show the prompt — `'denied'` is permanent until the user manually resets in site settings.
+
+### APIs / Tools Learned
+
+| API | Where | Purpose |
+|-----|-------|---------|
+| `Notification.requestPermission()` | Page JS | Request notification permission (Promise-based) |
+| `navigator.serviceWorker.ready` | Page JS | Promise that resolves when SW is active and controlling |
+| `registration.pushManager.subscribe()` | Page JS | Subscribe to push — returns PushSubscription |
+| `self.registration.showNotification()` | SW | Display an OS notification |
+| `event.data.json()` / `.text()` | SW push event | Extract push payload |
+| `clients.matchAll({ type: 'window' })` | SW | Find open tabs for this origin |
+| `clients.openWindow(url)` | SW | Open a new tab (must await, only in user gesture events) |
+| `client.focus()` | SW | Focus an existing tab |
+| `webpush.setVapidDetails()` | Server | Configure VAPID identity |
+| `webpush.sendNotification(sub, payload)` | Server | Send push to a subscription endpoint |
+
+### Architecture
+
+```
+Subscribe flow:
+  Page: requestPermission() → pushManager.subscribe(VAPID public key)
+      → POST subscription to server → server stores it
+
+Push flow:
+  Server: webpush.sendNotification(subscription, JSON.stringify(payload))
+       → Push service (FCM) delivers to browser
+       → Browser wakes SW → fires `push` event
+       → SW: event.data.json() → showNotification(title, { body })
+
+Click flow:
+  User clicks notification → `notificationclick` event in SW
+       → close notification → find/open tab → focus
+```
+
+### Key Gotchas
+
+- `applicationServerKey` in `pushManager.subscribe()` expects a `Uint8Array` (spec requirement). Chrome accepts base64 strings directly, but other browsers may not.
+- `clients.openWindow()` must be `await`ed — without it, the waitUntil promise resolves too early and the window may not open.
+- `navigator.serviceWorker.ready` already returns a Promise — don't double-await it.
+- Push payload sent by `webpush.sendNotification()` must be a **string** — use `JSON.stringify()` for objects.
+- The deprecated callback form of `Notification.requestPermission(callback)` should be avoided — use the Promise-based version.
+
+### Status
+
+- [x] VAPID keys generated and stored in .env
+- [x] Express server with web-push (setVapidDetails, store subscription, send push)
+- [x] Client subscribes via pushManager, sends subscription to server
+- [x] SW handles push event — parses JSON payload, shows notification
+- [x] SW handles notificationclick — focus existing tab or open new window
+- [x] End-to-end test: tab closed → server push → OS notification appears ✓

@@ -26,11 +26,14 @@ Open `http://localhost:3000` and use DevTools → Application → Service Worker
 service-worker/
 ├── index.html          — entry point
 ├── fallback.html       — offline fallback page (self-contained)
-├── app.js              — SW registration + form submit logic
-├── service-worker.js   — service worker lifecycle + cache strategies
-├── db.js               — IndexedDB helpers (WIP)
+├── app.js              — SW registration + push subscribe + form logic
+├── service-worker.js   — SW lifecycle, cache strategies, sync, push
+├── db.js               — IndexedDB helpers (pending request queue)
 ├── style.css           — base styles
 ├── assets/             — static images (cache-first targets)
+├── server/
+│   └── index.js        — Express server (push notifications via web-push)
+├── package.json        — server dependencies (express, web-push, cors)
 ├── PLAN.md             — learning roadmap
 └── NOTES.md            — concepts and Q&A
 ```
@@ -42,7 +45,7 @@ service-worker/
 - [x] Cache strategies
 - [x] Cache versioning & cleanup
 - [x] Background sync
-- [ ] Push notifications
+- [x] Push notifications
 
 ## Resources
 
