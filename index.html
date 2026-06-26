@@ -6,33 +6,42 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css" />
   <script type="module" src="./app.js" defer></script>
-  <title>Document</title>
+  <title>Service Worker — Phase 1</title>
 </head>
 
 <body>
   <header>
     <h1>Service Worker</h1>
-
-    <div style="display:flex; align-items: center; gap: 8px;">
-      <h3 class="time"></h3>
-      <h2 class="status">Online</h2>
+    <div class="header-right">
+      <span class="time"></span>
+      <span class="status">Online</span>
     </div>
   </header>
+
   <main>
-    <p>This is the body of the page.</p>
+    <section class="section-sync">
+      <h2>Background Sync</h2>
+      <form id="form-container">
+        <input id="name" placeholder="Full Name" />
+        <button type="submit">Submit</button>
+      </form>
+    </section>
 
-    <div class="img-container">
-      <img src="./assets/rock.avif" />
-    </div>
+    <section class="section-push">
+      <h2>Push Notifications</h2>
+      <button class="subscribe-button">Subscribe</button>
+      <p class="push-status"></p>
+    </section>
 
-    <div class="img-container">
-      <img src="./assets/desert.avif" />
-    </div>
-
-    <form id="form-container" class="form-container">
-      <input id="name" placeholder="Full Name" />
-      <button type="submit">Submit</button>
-    </form>
+    <section class="section-cache">
+      <h2>Cache Strategies</h2>
+      <div class="img-container">
+        <img src="./assets/rock.avif" alt="Rock landscape" />
+      </div>
+      <div class="img-container">
+        <img src="./assets/desert.avif" alt="Desert landscape" />
+      </div>
+    </section>
   </main>
 </body>
 

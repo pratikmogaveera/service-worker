@@ -1,6 +1,7 @@
 import { openDb, addToStore, deleteFromStore, getAllFromStore } from "./db.js"
 
 const CACHE_VERSION = 'static-v1'
+const APP_URL = 'http://localhost:3000'
 
 async function initializeIndexDB() {
   const db = await openDb()
@@ -43,6 +44,15 @@ async function handleCacheFirst(event) {
       return response
     });
   }
+}
+
+async function handleNotificationClick(event) {
+  event.notification.close()
+
+  const openClients = await clients.matchAll({ type: 'window' })
+  const myClient = openClients.find(client => client.url.includes(APP_URL))
+  if (myClient) myClient.focus()
+  else await clients.openWindow(APP_URL)
 }
 
 // Network-first: try network → clone + cache on success → return.
@@ -168,6 +178,18 @@ self.addEventListener('activate', async (event) => {
   event.waitUntil(initializeIndexDB())
   console.log("Service Worker Activated.");
 });
+
+self.addEventListener('push', (event) => {
+  const notification = event.data.json()
+  const { title, body } = notification
+  console.log("Notification received:", notification)
+  event.waitUntil(self.registration.showNotification(title, { body }))
+})
+
+self.addEventListener('notificationclick', async (event) => {
+  console.log("Notification clicked:", event)
+  event.waitUntil(handleNotificationClick(event))
+})
 
 self.addEventListener('fetch', (event) => {
   // Route requests to strategies: assets → cache-first, everything else → network-first.

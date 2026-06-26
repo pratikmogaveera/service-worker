@@ -45,5 +45,29 @@ form.addEventListener('submit', async (e) => {
     .catch((error) => console.log('Something went wrong while submitting the form.', error.message))
 })
 
+const subscribeButton = document.getElementsByClassName('subscribe-button')[0]
+subscribeButton.addEventListener('click', async (e) => {
+  e.preventDefault()
+  // permission = 'granted', 'denied', and 'default'
+  const notificationPermission = await Notification.requestPermission()
+  if (notificationPermission === 'granted') {
+    const swReady = await navigator.serviceWorker.ready
+    if (swReady) {
+      const subscription = await swReady.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: "BE8Xlntkui9zazwV6y7LFife9p_18MXcBAdH3Yj1J8yxZ_pHILaOrlE_G46HnXZ1IN3zeZjTA-k0GBmu-NYYic4"
+      })
+
+      console.log("Subscription:", subscription)
+      const subscribeResponse = await fetch('http://localhost:3001/subscribe', {
+        method: 'POST',
+        body: JSON.stringify(subscription),
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+  }
+
+})
+
 registerServiceWorker()
 showTime()
